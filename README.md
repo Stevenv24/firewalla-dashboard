@@ -15,7 +15,7 @@ This guide installs it on a **Synology NAS** with Container Manager. It takes ab
 * A **Synology NAS** with DSM 7.2 or later that can run **Container Manager** (most Plus models; check Package Center), on a network your Firewalla manages, with about **2 GB of free memory**.
 * A computer on the same network, with a web browser.
 * Optional:
-  * **Firewalla MSP**, for your target lists in the rule pop-ups.
+  * **Firewalla MSP**, for your target lists in the rule pop-ups; this is required for the dashboard to read the content of your target lists, which is needed by the Show Me How function (detailed instructions how to add/remove client access based on your existing rules and groups)
   * An **email account** (Gmail, iCloud Mail, Yahoo Mail or another provider) that can make an **app password**, for the daily digest and alerts by email. See [Email Alerts and App Passwords](#email-alerts-and-app-passwords).
   * An **Anthropic API key** with a little credit, for Ask Claude (about $5 to $20 a month). See [Ask Claude and the Anthropic API Key](#ask-claude-and-the-anthropic-api-key).
 
