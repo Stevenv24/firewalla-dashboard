@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Set Up · Firewalla Dashboard</title>
+    <link rel="icon" type="image/svg+xml" href="/static/next/favicon.svg?v=2">
+    <!-- The guided setup (setup.py). Shown at /next until this copy reaches
+         its router, and at /setup any time. Every change needs this start's
+         setup code. Pictures of each screen go in the marked spots (class
+         "shot") once they are taken from a demo account. -->
+    <style>
+        :root { color-scheme: dark; --bg: #0b1020; --card: #141b31; --line: #26304d; --text: #e6e9f2; --muted: #9aa3bd;
+                --good: #34d399; --bad: #f87171; --warn: #fbbf24; --accent: #f97316; }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+        .wrap { display: grid; grid-template-columns: 240px 1fr; gap: 28px; max-width: 1080px; margin: 36px auto; padding: 0 20px; }
+        @media (max-width: 800px) { .wrap { grid-template-columns: 1fr; } }
+        h1 { font-size: 26px; margin: 0 0 4px; }
+        h2 { font-size: 21px; margin: 0 0 10px; }
+        h3 { font-size: 17px; margin: 18px 0 8px; }
+        p { margin: 8px 0; }
+        .muted { color: var(--muted); }
+        .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px 24px; }
+        nav ol { list-style: none; padding: 0; margin: 14px 0 0; }
+        nav li { padding: 8px 10px; border-radius: 8px; margin: 2px 0; cursor: pointer; display: flex; gap: 8px; align-items: center; }
+        nav li.on { background: var(--card); border: 1px solid var(--line); }
+        nav li .tick { width: 20px; text-align: center; font-weight: 700; }
+        ol.steps { padding-left: 24px; }
+        ol.steps li { margin: 8px 0; }
+        label { display: block; margin: 12px 0 4px; font-weight: 600; }
+        input, select { width: 100%; max-width: 460px; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--line); background: #0f1528; color: var(--text); font: inherit; }
+        .hint { font-size: 14px; color: var(--muted); margin-top: 3px; }
+        .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; align-items: center; }
+        button { padding: 9px 16px; border-radius: 8px; border: 1px solid var(--line); background: #1c2542; color: var(--text); font: inherit; cursor: pointer; }
+        button.primary { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 700; }
+        button:disabled { opacity: .5; cursor: wait; }
+        .result { margin-top: 14px; }
+        .result div { padding: 4px 0; }
+        .ok { color: var(--good); } .no { color: var(--bad); } .maybe { color: var(--warn); }
+        .shot { margin: 10px 0 14px; border: 1px dashed var(--line); border-radius: 10px; padding: 18px; color: var(--muted); font-size: 14px; text-align: center; max-width: 460px; }
+        .warnbox { border-left: 4px solid var(--warn); padding: 8px 14px; background: #1d1a10; border-radius: 6px; margin: 12px 0; }
+        code { background: #0f1528; border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; font-size: 14px; }
+        details summary { cursor: pointer; color: var(--muted); margin-top: 12px; }
+        [hidden] { display: none; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <aside>
+        <h1>Set Up</h1>
+        <div class="muted">Firewalla Dashboard</div>
+        <nav><ol id="nav"></ol></nav>
+    </aside>
+
+    <main>
+        <!-- Sign in with the setup code -->
+        <section id="sign" class="card" hidden>
+            <h2>Type the Setup Code</h2>
+            <p>The setup code keeps anyone else on your network from changing your keys. A new one is made each time the dashboard starts.</p>
+            <ol class="steps">
+                <li>On your NAS, open <strong>Container Manager</strong> › <strong>Container</strong>, click the dashboard's container (its name ends in <code>dashboard</code> or is the one you chose), then <strong>Log</strong>.</li>
+                <li>Find the line <code>SETUP CODE for this start: XXXX-XXXX-XXXX</code>. (It is also in the file <code>config/setup_code.txt</code> in the dashboard's folder, in File Station.)</li>
+                <li>Type it below and click <strong>Continue</strong>.</li>
+            </ol>
+            <div class="shot">Picture to come: Container Manager › Container › Log, with the setup code line</div>
+            <label for="code">Setup Code</label>
+            <input id="code" autocomplete="off" placeholder="XXXX-XXXX-XXXX">
+            <div class="row"><button class="primary" data-do="sign">Continue</button></div>
+            <div class="result" id="signResult"></div>
+        </section>
+
+        <!-- Step 1 -->
+        <section id="s1" class="card step" hidden>
+            <h2>1. Your Network</h2>
+            <p>A few things about your network. You can change them later by opening this page again at <code>/setup</code>.</p>
+            <label for="name">Network Name</label>
+            <input id="name" maxlength="40" placeholder="Smith Home">
+            <div class="hint">Shown in the menu and in email subjects, as "Smith Home Network".</div>
+            <label for="tz">Time Zone</label>
+            <select id="tz"></select>
+            <div class="hint">Used for the times on every page and in emails. Filled in from this computer.</div>
+            <label for="router">Router Address</label>
+            <input id="router" placeholder="192.168.1.1">
+            <div class="hint">Your Firewalla's own address on the network this NAS is on, usually the same as the NAS's address with .1 at the end (filled in as a guess). The Firewalla app shows it for each network under <strong>Network Manager</strong>.</div>
+            <div class="shot">Picture to come: Firewalla app › Network Manager › a network, with its gateway address</div>
+            <label for="model">Router Model</label>
+            <select id="model">
+                <option value="Firewalla Gold Pro">Firewalla Gold Pro</option>
+                <option value="Firewalla Gold Plus">Firewalla Gold Plus</option>
+                <option value="Firewalla Gold SE">Firewalla Gold SE</option>
+                <option value="Firewalla Gold">Firewalla Gold</option>
+                <option value="Firewalla Purple">Firewalla Purple</option>
+                <option value="Firewalla Purple SE">Firewalla Purple SE</option>
+                <option value="">Another model</option>
+            </select>
+            <div class="hint">Printed on the box and shown in the app under your box's name.</div>
+            <details>
+                <summary>More (most people leave this empty)</summary>
+                <label for="hosts">Extra Names for This Dashboard</label>
+                <input id="hosts" placeholder="nas.example.com">
+                <div class="hint">If you open the dashboard by a name with a dot in it (not an IP address), type that name here, or the dashboard refuses it.</div>
+            </details>
+            <div class="row"><button class="primary" data-do="s1">Save and Continue</button></div>
+            <div class="result" id="s1Result"></div>
+        </section>
+
+        <!-- Step 2 -->
+        <section id="s2" class="card step" hidden>
+            <h2>2. Router Access</h2>
+            <p>The dashboard reads your router through a locked-down connection. You type the router's SSH password <strong>once</strong>: the dashboard uses it a single time to set up its own key, then forgets it.</p>
+            <h3>Turn SSH On and Copy the Password</h3>
+            <ol class="steps">
+                <li>Open the <strong>Firewalla app</strong> on your phone and tap your box.</li>
+                <li>Tap <strong>Settings</strong> › <strong>Advanced</strong> › <strong>Configurations</strong> › <strong>SSH Console</strong>.</li>
+                <li>Turn SSH <strong>on</strong> for the network this NAS is on. (On Gold and Purple, each network has its own switch.)</li>
+                <li>Copy the <strong>password</strong> shown there. It changes whenever the router restarts; that is fine, the dashboard needs it only this once.</li>
+                <li>Paste it below and click <strong>Connect</strong>.</li>
+            </ol>
+            <div class="shot">Picture to come: Firewalla app › Settings › Advanced › Configurations</div>
+            <div class="shot">Picture to come: the SSH Console screen, with the switch per network and the password</div>
+            <label for="pw">SSH Password</label>
+            <input id="pw" type="password" autocomplete="off">
+            <details>
+                <summary>More (only for two NAS units working as a pair)</summary>
+                <label for="alsoFrom">Also Allow From</label>
+                <input id="alsoFrom" placeholder="192.168.1.11">
+                <div class="hint">The dashboard's key is accepted only from this NAS's address. With Synology High Availability, add the other unit's own address here.</div>
+            </details>
+            <div class="row"><button class="primary" data-do="s2">Connect</button><span class="muted" id="s2Wait" hidden>Setting up the router and checking it: this takes up to two minutes.</span></div>
+            <div class="result" id="s2Result"></div>
+            <p class="muted">What happens: the dashboard makes its own key, adds it on the router so it can only open a tunnel to a read-only filter (no commands, no other connections, only from this NAS), puts the read-only filter in place (or uses the one already there), and then tests all of it. Your other keys on the router are left alone. <strong>Keep SSH turned on</strong> in the app afterwards: if you turn it off, the dashboard stops until you turn it back on.</p>
+        </section>
+
+        <!-- Step 3 -->
+        <section id="s3" class="card step" hidden>
+            <h2>3. Checks Before Use</h2>
+            <p>The dashboard looks at a few of your router's settings. Each one shows a green tick, or what to change.</p>
+            <div class="result" id="s3Result">Checking…</div>
+            <div class="row"><button data-do="s3">Check Again</button><button class="primary" data-go="4">Continue</button></div>
+        </section>
+
+        <!-- Step 4 -->
+        <section id="s4" class="card step" hidden>
+            <h2>4. Firewalla MSP (Optional)</h2>
+            <p>Only if you use Firewalla MSP. Without it the dashboard still works; the rule pop-ups can't show your target lists.</p>
+            <ol class="steps">
+                <li>Open your MSP site in a browser and sign in.</li>
+                <li>Copy the address from the address bar, up to <code>.firewalla.net</code>, and paste it below.</li>
+                <li>In MSP, open <strong>Settings</strong> › <strong>API Tokens</strong> and click <strong>Create</strong>.</li>
+                <li>Name it "Dashboard" and give it <strong>read-only</strong> access.</li>
+                <li>Copy the token, paste it below and click <strong>Check and Save</strong>.</li>
+            </ol>
+            <div class="shot">Picture to come: MSP › Settings › API Tokens › Create, with read-only chosen</div>
+            <label for="mspUrl">MSP Address</label>
+            <input id="mspUrl" placeholder="https://xxxxxx.firewalla.net">
+            <label for="mspToken">Read-Only Token</label>
+            <input id="mspToken" type="password" autocomplete="off">
+            <div class="row"><button class="primary" data-do="s4">Check and Save</button><button data-go="5">Skip</button></div>
+            <div class="result" id="s4Result"></div>
+        </section>
+
+        <!-- Step 5 -->
+        <section id="s5" class="card step" hidden>
+            <h2>5. Email Alerts (Optional)</h2>
+            <p>For the daily digest and alerts by email, through your Gmail account. You need a Gmail "app password", not your normal password.</p>
+            <ol class="steps">
+                <li>Your Google account needs <strong>2-Step Verification</strong> turned on (Google Account › Security).</li>
+                <li>Go to <strong>myaccount.google.com/apppasswords</strong> and sign in.</li>
+                <li>Type "Firewalla Dashboard" as the name and click <strong>Create</strong>.</li>
+                <li>Copy the 16-letter password Google shows (the spaces don't matter).</li>
+                <li>Fill in the boxes below and click <strong>Send Test Email</strong>.</li>
+            </ol>
+            <div class="shot">Picture to come: Google › App passwords, with the 16-letter password</div>
+            <label for="gmail">Your Gmail Address</label>
+            <input id="gmail" type="email" placeholder="you@gmail.com">
+            <label for="appPw">App Password</label>
+            <input id="appPw" type="password" autocomplete="off" placeholder="16 letters">
+            <label for="mailTo">Send the Emails To</label>
+            <input id="mailTo" type="email" placeholder="the same address, or another">
+            <div class="row"><button class="primary" data-do="s5">Send Test Email</button><button data-go="6">Skip</button></div>
+            <div class="result" id="s5Result"></div>
+        </section>
+
+        <!-- Step 6 -->
+        <section id="s6" class="card step" hidden>
+            <h2>6. Ask Claude (Optional)</h2>
+            <p>Claude can explain findings in plain words. It only reads the facts the dashboard gives it and writes text; it can't change anything. The dashboard works fully without it.</p>
+            <div class="warnbox">Use an <strong>API key from the Claude Console</strong>. Don't use a Claude Pro or Max sign-in: Anthropic's terms don't allow that for an app like this.</div>
+            <ol class="steps">
+                <li>Go to <strong>console.anthropic.com</strong> and make an account (or sign in).</li>
+                <li>Open <strong>Billing</strong>, add a card and buy some credit, for example $10.</li>
+                <li>Open <strong>Limits</strong> and set a monthly spend limit, for example $20. That is your safety cap.</li>
+                <li>Open <strong>API Keys</strong>, click <strong>Create Key</strong>, name it "Dashboard" and copy it (it is shown only once).</li>
+                <li>Paste it below and click <strong>Save</strong>.</li>
+            </ol>
+            <div class="shot">Picture to come: Claude Console › Limits, with a monthly spend limit</div>
+            <div class="shot">Picture to come: Claude Console › API Keys › Create Key</div>
+            <p class="muted">Rough cost: about $5 to $20 a month for a home network; the dashboard's daily limits keep it under about $60 even when used a lot.</p>
+            <label for="apiKey">Anthropic API Key</label>
+            <input id="apiKey" type="password" autocomplete="off" placeholder="sk-ant-…">
+            <div class="row"><button class="primary" data-do="s6">Save</button><button data-go="7">Skip</button></div>
+            <div class="result" id="s6Result"></div>
+        </section>
+
+        <!-- Step 7 -->
+        <section id="s7" class="card step" hidden>
+            <h2>7. Done</h2>
+            <div class="result" id="s7Result"></div>
+            <p>Click <strong>Finish</strong>: the dashboard restarts with your settings and opens in about a minute. Bookmark it: <code id="bookmark"></code></p>
+            <div class="row"><button class="primary" data-do="s7">Finish</button></div>
+            <div class="result" id="s7Note"></div>
+        </section>
+    </main>
+</div>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = text => { const d = document.createElement("div"); d.textContent = String(text ?? ""); return d.innerHTML; };
+const STEPS = ["Your Network", "Router Access", "Checks Before Use", "Firewalla MSP", "Email Alerts", "Ask Claude", "Done"];
+let state = null, current = 1;
+
+// Time zones as rules (the image has no time-zone files); the browser's own zone picks the first match.
+const ZONES = [
+    ["US Eastern", "EST5EDT,M3.2.0,M11.1.0", ["America/New_York", "America/Detroit", "America/Toronto", "America/Indiana"]],
+    ["US Central", "CST6CDT,M3.2.0,M11.1.0", ["America/Chicago", "America/Winnipeg"]],
+    ["US Mountain", "MST7MDT,M3.2.0,M11.1.0", ["America/Denver", "America/Edmonton", "America/Boise"]],
+    ["US Arizona", "MST7", ["America/Phoenix"]],
+    ["US Pacific", "PST8PDT,M3.2.0,M11.1.0", ["America/Los_Angeles", "America/Vancouver"]],
+    ["US Alaska", "AKST9AKDT,M3.2.0,M11.1.0", ["America/Anchorage"]],
+    ["US Hawaii", "HST10", ["Pacific/Honolulu"]],
+    ["UK and Ireland", "GMT0BST,M3.5.0/1,M10.5.0", ["Europe/London", "Europe/Dublin"]],
+    ["Central Europe", "CET-1CEST,M3.5.0,M10.5.0/3", ["Europe/Berlin", "Europe/Paris", "Europe/Amsterdam", "Europe/Madrid", "Europe/Rome", "Europe/Vienna", "Europe/Zurich", "Europe/Stockholm"]],
+    ["Eastern Europe", "EET-2EEST,M3.5.0/3,M10.5.0/4", ["Europe/Helsinki", "Europe/Athens", "Europe/Bucharest", "Europe/Kiev", "Europe/Kyiv"]],
+    ["Australia Eastern", "AEST-10AEDT,M10.1.0,M4.1.0/3", ["Australia/Sydney", "Australia/Melbourne"]],
+    ["UTC", "UTC0", ["UTC", "Etc/UTC"]],
+];
+
+async function api(path, body) {
+    const res = await fetch(path, body === undefined ? { cache: "no-store" } :
+        { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    if (res.status === 401) { state.signed_in = false; show(); throw new Error("Type the setup code first."); }
+    return res.json();
+}
+const line = (ok, text) => `<div class="${ok === true ? "ok" : ok === false ? "no" : "maybe"}">${ok === true ? "✓" : ok === false ? "✗" : "•"} ${esc(text)}</div>`;
+const done = n => !state ? false : n === 1 ? state.router.address : n === 2 ? state.router.key && state.router.connected :
+    n === 4 ? state.msp.token : n === 5 ? state.mail : n === 6 ? state.claude.key : n === 7 ? state.done : false;
+
+function nav() {
+    $("nav").innerHTML = STEPS.map((name, i) => `<li class="${current === i + 1 ? "on" : ""}" data-go="${i + 1}">` +
+        `<span class="tick ${done(i + 1) ? "ok" : "muted"}">${done(i + 1) ? "✓" : i + 1}</span>${esc(name)}</li>`).join("");
+}
+function show() {
+    $("sign").hidden = state.signed_in;
+    document.querySelectorAll(".step").forEach(s => { s.hidden = !state.signed_in || s.id !== "s" + current; });
+    nav();
+    if (current === 3 && state.signed_in) runChecks();
+    if (current === 6) claudeStatus();
+    if (current === 7) summary();
+}
+function go(n) { current = Math.max(1, Math.min(7, n)); show(); window.scrollTo(0, 0); }
+
+function fill() {
+    const s = state.settings || {};
+    $("tz").innerHTML = ZONES.map(z => `<option value="${esc(z[1])}">${esc(z[0])}</option>`).join("");
+    const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+    const guess = ZONES.find(z => z[2].some(name => browserZone.startsWith(name)));
+    $("tz").value = s.TZ || (guess ? guess[1] : "UTC0");
+    $("name").value = s.FIREWALLA_SITE_NAME && s.FIREWALLA_SITE_NAME !== "My" ? s.FIREWALLA_SITE_NAME : "";
+    const host = location.hostname;
+    $("router").value = s.FIREWALLA_SSH_HOST || (/^\d+\.\d+\.\d+\.\d+$/.test(host) ? host.replace(/\.\d+$/, ".1") : "");
+    $("model").value = s.FIREWALLA_ROUTER_MODEL || "Firewalla Gold Pro";
+    $("hosts").value = s.FIREWALLA_ALLOWED_HOSTS || "";
+    $("mspUrl").value = s.FIREWALLA_MSP_URL || "";
+    $("bookmark").textContent = `${location.protocol}//${location.host}/next`;
+}
+
+async function refresh() {
+    state = await api("/api/setup/state");
+    if (state.signed_in && !fill.done) { fill(); fill.done = true; }
+    show();
+}
+
+async function act(what, button) {
+    button.disabled = true;
+    try {
+        if (what === "sign") {
+            const r = await api("/api/setup/sign-in", { code: $("code").value });
+            $("signResult").innerHTML = r.ok ? "" : line(false, r.error);
+            if (r.ok) { await refresh(); go(state.router.address ? (state.router.connected ? 3 : 2) : 1); }
+        } else if (what === "s1") {
+            const r = await api("/api/setup/settings", { site_name: $("name").value, tz: $("tz").value, router_address: $("router").value,
+                                                         router_model: $("model").value, allowed_hosts: $("hosts").value });
+            $("s1Result").innerHTML = r.ok ? line(true, "Saved.") + (r.note ? line(null, r.note) : "") : line(false, r.error);
+            if (r.ok) { await refresh(); go(2); }
+        } else if (what === "s2") {
+            $("s2Wait").hidden = false;
+            $("s2Result").innerHTML = "";
+            const r = await api("/api/setup/router", { password: $("pw").value, also_from: $("alsoFrom").value });
+            $("pw").value = "";
+            $("s2Result").innerHTML = (r.steps || []).map(s => line(s.ok, s.text)).join("") + (r.error ? line(false, r.error) : "") +
+                ((r.router_says || []).length ? `<details><summary>What the router said</summary><pre>${esc(r.router_says.join("\n"))}</pre></details>` : "") +
+                (r.ok ? `<div class="row"><button class="primary" data-go="3">Continue</button></div>` : "");
+            await refresh();
+        } else if (what === "s3") {
+            await runChecks();
+        } else if (what === "s4") {
+            const r = await api("/api/setup/msp", { url: $("mspUrl").value, token: $("mspToken").value });
+            $("mspToken").value = "";
+            $("s4Result").innerHTML = r.ok ? line(true, r.note) + `<div class="row"><button class="primary" data-go="5">Continue</button></div>` : line(false, r.error);
+            await refresh();
+        } else if (what === "s5") {
+            const r = await api("/api/setup/mail", { user: $("gmail").value, app_password: $("appPw").value, to: $("mailTo").value });
+            $("appPw").value = "";
+            $("s5Result").innerHTML = r.ok ? line(true, r.note) + `<div class="row"><button class="primary" data-go="6">Continue</button></div>` : line(false, r.error);
+            await refresh();
+        } else if (what === "s6") {
+            const r = await api("/api/setup/claude", { key: $("apiKey").value });
+            $("apiKey").value = "";
+            $("s6Result").innerHTML = r.ok ? line(true, r.note) : line(false, r.error);
+            await refresh();
+            if (r.ok) claudeStatus(true);
+        } else if (what === "s7") {
+            const r = await api("/api/setup/finish", {});
+            $("s7Note").innerHTML = r.ok ? line(true, r.note) : line(false, r.error);
+            if (r.ok) waitForRestart();
+        }
+    } catch (e) {
+        if (what !== "sign") console.warn(e);
+    } finally {
+        button.disabled = false;
+        $("s2Wait").hidden = true;
+    }
+}
+
+async function runChecks() {
+    try {
+        const r = await api("/api/setup/checks");
+        $("s3Result").innerHTML = r.checks.map(c => `<div class="${c.ok === true ? "ok" : c.ok === false ? "no" : "maybe"}"><strong>${c.ok === true ? "✓" : c.ok === false ? "✗" : "•"} ${esc(c.name)}</strong><br><span class="muted">${esc(c.text)}</span></div>`).join("");
+    } catch (e) { $("s3Result").textContent = "The dashboard didn't answer; try again."; }
+}
+
+const KEY_WORDS = { ok: [true, "Anthropic accepted the key. Ask Claude is on."], refused: [false, "Anthropic refused the key: copy it again, or make a new one."],
+                    "no-credit": [false, "The key works, but the account has no credit: add some under Billing."],
+                    limit: [null, "The key works, but a limit was reached: check Limits in the Console."],
+                    error: [null, "Anthropic answered with an error: try again in a few minutes."] };
+let claudeTimer = null;
+function claudeStatus(waitForIt) {
+    const c = state.claude || {};
+    const words = c.key ? (KEY_WORDS[c.key_state] && c.worker_seen ? KEY_WORDS[c.key_state] : [null, "Saved. Waiting for the Claude worker to check it (up to a minute)…"]) : null;
+    const box = $("s6Result");
+    if (words && !box.dataset.typed) box.innerHTML = line(words[0], words[1]) + (words[0] === true ? `<div class="row"><button class="primary" data-go="7">Continue</button></div>` : "");
+    clearTimeout(claudeTimer);
+    if (current === 6 && c.key && (waitForIt || !(KEY_WORDS[c.key_state] && c.worker_seen)))
+        claudeTimer = setTimeout(async () => { await refresh(); }, 10000);
+}
+
+function summary() {
+    $("s7Result").innerHTML = [
+        line(!!state.router.address, state.router.address ? "Your network's settings are saved." : "Your network's settings aren't saved yet (step 1)."),
+        line(state.router.key && state.router.connected, state.router.connected ? "The dashboard reads your router." : "The router isn't connected yet (step 2)."),
+        line(state.msp.token ? true : null, state.msp.token ? "MSP is set up." : "MSP skipped."),
+        line(state.mail ? true : null, state.mail ? "Email is set up." : "Email skipped."),
+        line(state.claude.key ? (state.claude.key_state === "ok" ? true : null) : null, state.claude.key ? "Ask Claude: key saved." : "Ask Claude skipped."),
+    ].join("");
+}
+
+async function waitForRestart() {
+    await new Promise(r => setTimeout(r, 8000));
+    for (let i = 0; i < 60; i++) {
+        try {
+            const s = await fetch("/api/setup-status", { cache: "no-store" }).then(r => r.json());
+            if (!s.needed) { location.href = "/next"; return; }
+        } catch (e) { /* still restarting */ }
+        await new Promise(r => setTimeout(r, 3000));
+    }
+    $("s7Note").innerHTML = line(null, "The dashboard is taking longer than usual. Open " + location.host + "/next in a minute.");
+}
+
+document.addEventListener("click", e => {
+    const target = e.target.closest("[data-go], [data-do]");
+    if (!target) return;
+    if (target.dataset.go) go(Number(target.dataset.go));
+    else act(target.dataset.do, target);
+});
+$("code").addEventListener("keydown", e => { if (e.key === "Enter") act("sign", document.querySelector('[data-do="sign"]')); });
+refresh().catch(() => { document.body.innerHTML = "<p style='padding:30px'>The dashboard didn't answer. Refresh this page in a moment.</p>"; });
+</script>
+</body>
+</html>

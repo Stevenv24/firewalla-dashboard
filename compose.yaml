@@ -1,0 +1,110 @@
+services:
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: ${CONTAINER_PREFIX:-firewalla-dashboard}
+    restart: unless-stopped
+
+    # The startup script (SSH tunnel + web server) runs straight from this
+    # folder, like the program and the web files: editing it needs only a
+    # container restart, never an image rebuild.
+    command: ["/bin/sh", "/start-dashboard.sh"]
+
+    # Fixed for every copy. This network's own settings (router address,
+    # name, time zone, MSP...) are in config/settings.env, which
+    # start-dashboard.sh reads (see settings.env.example).
+    environment:
+      FIREWALLA_SSH_USER: "pi"
+      FIREWALLA_HISTORY_FILE: "/data/internet_blocked_hourly.json"
+      FIREWALLA_FLOW_DB: "/data/firewalla_dashboard.db"
+      FIREWALLA_FLOW_HISTORY_HOURS: "24"
+
+    # The port the dashboard opens on and the container names come from the
+    # file .env next to this one (see .env.example): they are needed before
+    # the container starts.
+    ports:
+      - "${PORT:-8180}:8080"
+
+    # Lock-down: the dashboard only reads the router through its tunnel and
+    # writes its own files in /data, so it gets nothing more than that.
+    #   - every special Linux power removed except DAC_OVERRIDE (read and
+    #     write its own data and key files whoever owns them on the NAS)
+    #   - nothing inside can gain more rights later
+    #   - its program files can't be changed; only /data, /logs and a
+    #     scratch area in memory (/tmp) can be written. /tmp holds the SSH
+    #     key copy and the database's sort files.
+    #   - at most 512 processes/threads and 1 GB of memory, so a runaway bug
+    #     can't slow down the NAS.
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_OVERRIDE
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m
+    pids_limit: 512
+    mem_limit: 1g
+
+    volumes:
+      # The whole program folder (the .py files and the web files), read-only.
+      - ./app:/app:ro
+      - ./start-dashboard.sh:/start-dashboard.sh:ro
+      # The read-only filter and its installer, sent to the router by the
+      # guided setup.
+      - ./router:/router:ro
+
+      - ./data:/data
+      - ./logs:/logs
+
+      # This copy's own settings, keys and tokens (never shared, never
+      # committed). Writable by the dashboard only, so its setup can save
+      # what you type there; the program files above stay read-only, and
+      # the Claude worker only reads this folder. File names inside config/:
+      #   settings.env            this network's settings (settings.env.example)
+      #   firewalla_ssh_key       the dashboard's router key (ed25519)
+      #   firewalla_known_hosts   the router's host key
+      #   msp_api_token           read-only MSP token (optional)
+      #   mail_settings           email settings (optional): host, port,
+      #                           user, password, to (key=value lines)
+      #   claude_worker_key       shared with the Claude worker (made by the
+      #                           dashboard on its first start)
+      #   claude_api_key          your Anthropic API key from the Claude
+      #                           Console (optional; read only by the worker)
+      - ./config:/run/secrets
+
+  # Claude: answers the dashboard's questions (Ask Claude) through the
+  # Anthropic API with your own API key (never a Pro/Max sign-in). Claude
+  # gets NO tools: the worker fetches a question from the dashboard, sends
+  # Claude the facts as text and posts the answer back. Claude can't run
+  # commands, read or write files, browse, or reach the router; nothing it
+  # says changes anything by itself. Without a key in config/ it asks nothing.
+  claude-worker:
+    build:
+      context: ./claude-worker
+      dockerfile: Dockerfile
+    container_name: ${CONTAINER_PREFIX:-firewalla-dashboard}-claude
+    restart: unless-stopped
+    depends_on:
+      - dashboard
+    environment:
+      DASHBOARD_URL: "http://dashboard:8080"
+    # Same lock-down as the dashboard, tighter: nothing writable except a
+    # scratch area in memory, no ports.
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_OVERRIDE
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m
+    pids_limit: 256
+    mem_limit: 1g
+    volumes:
+      - ./claude-worker/worker.py:/worker/worker.py:ro
+      - ./config:/run/secrets:ro

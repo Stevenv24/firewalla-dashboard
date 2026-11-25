@@ -1,0 +1,20 @@
+# Not tracked by version history (this copy will be made public):
+# - data, logs: each copy's own database, history and logs
+# - config: each copy's own router key, known_hosts, MSP token, email
+#   settings and Claude key (secret; never commit)
+data/
+logs/
+config/
+# - .env: this copy's own settings (see .env.example)
+.env
+*.db
+*.db-shm
+*.db-wal
+__pycache__/
+# - Show Me How pictures and product photos: the current ones show the
+#   owner's network (names, addresses) or may be Firewalla's own pictures.
+#   Kept here for testing only, until new ones from a demo account replace
+#   them (shareable-edition-plan.md, sections 1e and 7d).
+app/static/next/img/howto/
+app/static/next/img/gold-pro-front.png
+app/static/next/img/switch-x-front.png
