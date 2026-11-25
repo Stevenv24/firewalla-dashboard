@@ -40,7 +40,7 @@ import uuid
 from fastapi import Body
 
 from core import (
-    Fields, app, claude_load, claude_lock, claude_public, policy_read_json, state,
+    Fields, app, claude_load, claude_lock, claude_public, policy_read_json, router_ready, state,
 )
 from router import (
     policy_rule_for_pid,
@@ -357,15 +357,6 @@ NEED_SOURCES = ("Seen", "Maker", "Standard")
 NEED_CHECK_PAIRS = 40       # device pairs checked per line (a group side has many)
 
 
-def connections_ready():
-    """The router's groups and rules have been read since the dashboard
-    started. Until then nothing seems to block anything (17 Nov 2026: right
-    after a restart A's printing Need showed Done for a minute, its
-    VqLAN not loaded yet), so no reach check is believed. The rules entry
-    is there from the start, empty, so its read time is what tells."""
-    return bool(state.get("groups")) and bool((state.get("policy_rules") or {}).get("updated_at"))
-
-
 def need_port(line):
     """A proposed line's port as Allowed Connections keys it, its label, and the
     port check_local_access takes: ("tcp 631", "TCP 631", ("tcp", 631))."""
@@ -676,7 +667,7 @@ def need_facts(need_id):
                     today.append({"from": x["name"], "to": y["name"], "same_network": x.get("network") == y.get("network"),
                                   "verdict": r["verdict"], "decided_by": r["deciding"].get("text"),
                                   "rules_and_settings_in_the_way": [s["text"] for s in r["steps"]][:6], "notes": r["notes"][:3]})
-    facts["reach_today"] = today[:24] if connections_ready() else "not known yet: the dashboard has just started and is still reading the router"
+    facts["reach_today"] = today[:24] if router_ready() else "not known yet: the dashboard has just started and is still reading the router"
     facts["blocked_last_7_days"], unanswered = need_blocked_recent({s["mac"] for s in src}, {s["mac"] for s in dst}, names, groups)
     if unanswered:
         facts["tries_not_answered_last_7_days"] = (f"{unanswered}: the other side was off, or nothing is at that address. "
@@ -710,7 +701,7 @@ def need_line_check(line, need, src, dst, groups, rules, isolated, seen):
     does today, what else opening it would open, and what setup can
     enforce it. seen = {(from MAC, to MAC, port key)} allowed in a year."""
     key, _, port = need_port(line)
-    if not connections_ready():
+    if not router_ready():
         return {"today": "unknown", "today_text": "Not checked yet: the dashboard is still reading the router after a start",
                 "opens": "--", "setup": "later", "setup_text": "Checked again in a minute"}
     if need["dst"] == "internet":
@@ -832,7 +823,7 @@ def need_keep_state(need):
     ("ready", words) once a way to make that change that works leaves the
     pair as it is today; ("waiting", words) while every such way still
     changes it; ("unknown", words) before the router is read."""
-    if not connections_ready():
+    if not router_ready():
         return "unknown", "Not checked yet: the dashboard is still reading the router after a start"
     req = need.get("for_request") or {}
     a, b = need["src"][2:].upper(), need["dst"][2:].upper()
@@ -1234,7 +1225,7 @@ def api_connections_page():
             connections_cache["at"] = time.time()
             # Built before the router's groups and rules were read: built
             # again within 10 seconds, not kept a minute.
-            if not connections_ready():
+            if not router_ready():
                 connections_cache["at"] -= CONNECTIONS_CACHE_SECONDS - 10
         data = connections_cache["data"]
     with claude_lock:

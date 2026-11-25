@@ -13,7 +13,7 @@ from fastapi import Body
 
 from core import (
     Fields, INTERFACE_METADATA, app, msp, policy_read_json, public_error, router_ips,
-    router_macs, state,
+    router_macs, router_ready, state,
 )
 from router import (
     access_device_protect, feature_settings, internet_interface_name, policy_rule_for_pid,
@@ -838,6 +838,12 @@ def groups_reach():
             return groups_reach_cache["data"]
         started = time.time()
         sides, groups = access_sides()
+        # Just after a start, before the router's devices, groups and rules
+        # are read (router_ready): keep the last answer, never an empty one
+        # for 2 minutes (25 Nov 2026: every group showed "no group it can
+        # reach"). groups None = the page shows "Working it out…".
+        if not router_ready() or not sides or not groups:
+            return groups_reach_cache["data"] or {"groups": None, "clients": {}, "updated_at": time.time(), "took": 0, "pairs": 0}
         rules, iso, seen = access_local_rules(), access_isolated(), access_seen_all()
         paused = {mac: why for mac, side in sides.items() if (why := access_paused(side))}
         # A client in no group counts here as a group of its own (owner, 22 Nov
@@ -859,8 +865,14 @@ def groups_reach():
                 evidence = access_evidence(r["verdict"], entry)
                 # "Traffic disagrees": the rules block it, yet real connections
                 # got through (not the router's summary of blocked tries).
+                # Ports (owner, 25 Nov 2026): an allow through a target list
+                # limited to ports (the rule that decides, or the one that
+                # opens VqLAN) gets through on those only; None = every port.
+                lifters = {x.get("lifted_by") for x in r["steps"] if x.get("lifted_by")}
+                ports = [x["ports"] for x in r["steps"] if x.get("ports") and x.get("effect") == "allow"
+                         and not x.get("not_applied") and (x.get("decides") or x.get("pid") in lifters)]
                 done[key] = (r["verdict"] == "allowed", bool(r["uncertain"]), (r.get("deciding") or {}).get("text") or "",
-                             evidence, evidence["kind"] == "contradicted")
+                             evidence, evidence["kind"] == "contradicted", ports or None)
             return done[key]
 
         out = {}
@@ -873,8 +885,8 @@ def groups_reach():
                 devs = []
                 for d in members[yid]:
                     both = one_way = none = flows = 0
-                    unsure = contra = False
-                    last, why, example = 0, "", None
+                    unsure = contra = every_port = reached = False
+                    last, why, example, ports = 0, "", None, []
                     for m in members[xid]:
                         if m["mac"] == d["mac"]:
                             continue
@@ -883,6 +895,10 @@ def groups_reach():
                         both, one_way, none = both + (n == 2), one_way + (n == 1), none + (n == 0)
                         unsure = unsure or there[1] or back[1]
                         for r in (there, back):
+                            if r[0]:
+                                reached = True
+                                every_port = every_port or not r[5]
+                                ports += [p for p in r[5] or () if p not in ports]
                             flows += r[3]["flows"]
                             last = max(last, r[3]["last_seen"] or 0) if r[3]["flows"] else last
                             if r[4]:
@@ -898,7 +914,11 @@ def groups_reach():
                         tone = "good" if both == pairs else "bad" if none == pairs else "warn"
                     devs.append({"mac": d["mac"], "tone": tone, "one_way": bool(one_way), "unsure": unsure, "flows": flows,
                                  "last_seen": last or None, "contra": contra, "why": "" if tone == "good" else why,
-                                 "check": example or next((m["mac"] for m in members[xid] if m["mac"] != d["mac"]), None)})
+                                 "check": example or next((m["mac"] for m in members[xid] if m["mac"] != d["mac"]), None),
+                                 # Where it is reached (owner, 25 Nov 2026): ports = the ports a target
+                                 # list limits it to, [] for All Ports; every_port: some members (or
+                                 # one way) reach it on every port.
+                                 **({"ports": ports, "every_port": every_port} if reached else {})})
                 if own and (not devs or not members[xid]):
                     tone = "bad" if x.get("isolation") else "good"
                 elif not devs or not members[xid]:
@@ -3743,7 +3763,12 @@ def howto_done_facts(change):
 
 
 def howto_seen(watch):
-    """Has the dashboard seen this step done?"""
+    """Has the dashboard seen this step done? Never before the router's
+    devices, groups and rules are read (router_ready): until then every step
+    looks done (no rule = removed, no device = deleted, nothing blocks), and
+    a change whose steps are all seen is marked done for good (25 Nov 2026)."""
+    if not router_ready():
+        return False
     kind = watch.get("kind")
     rules = (state.get("policy_rules") or {}).get("rules") or []
     lists = msp["lists"].values()

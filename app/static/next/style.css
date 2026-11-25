@@ -1315,6 +1315,7 @@ button.st-verdict:focus-visible { outline: 2px solid var(--accent); outline-offs
 .pl-msg { flex: 1 1 400px; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px;
     background: color-mix(in srgb, var(--st-action) 12%, transparent); border: 1px solid var(--info-line); color: var(--info-text); font-weight: 600; }
 .pl-msg a { margin-left: auto; color: var(--muted); text-decoration: none; }
+.pl-msg a.pl-undo { margin-left: 0; color: var(--info-text); text-decoration: underline; }
 /* Decided: From and To drop-downs of the clients in the table, with Clear (owner, 23 Nov 2026). */
 .dc-search { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 8px; }
 /* Open But Unused: the Narrow It choices popup (owner, 23 Nov 2026, D-920). */
@@ -1382,8 +1383,6 @@ button.st-verdict:focus-visible { outline: 2px solid var(--accent); outline-offs
 .pl-table td { padding: 6px 4px; border-top: 1px solid var(--line); }
 .pl-table tbody tr:hover td { background: color-mix(in srgb, var(--text) 3%, transparent); }
 .pl-table .nowrap { white-space: nowrap; }
-.pl-table tr.pl-unchosen td { background: color-mix(in srgb, var(--warn) 10%, transparent); }
-.pl-table tr.pl-unchosen td:first-child { box-shadow: inset 2px 0 0 var(--warn); }
 .pl-pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
 .pl-pill.good { background: color-mix(in srgb, var(--good) 13%, transparent); color: var(--good-text); }
 .pl-pill.bad { background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--bad-text); }
@@ -1402,7 +1401,6 @@ button.st-verdict:focus-visible { outline: 2px solid var(--accent); outline-offs
 .pl-sug.allow { border-color: var(--good); color: var(--good-text); } .pl-sug.block { border-color: var(--bad); color: var(--bad-text); }
 .pl-more { display: inline-block; margin-top: 6px; font-size: 12px; }
 .pl-acts { display: flex; gap: 8px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
-.pl-count { margin-left: auto; font-size: 12px; color: var(--muted); }
 /* The card's buttons: plain white text; only Ask Claude is coloured
    (owner, 19 Nov 2026). */
 .card-button.pl-act { width: auto; padding: 6px 12px; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--text); background: var(--raised); border-color: var(--line-strong); }
@@ -2239,6 +2237,7 @@ a.gr-chip.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 4
 .gr-rcols { columns: 2 300px; column-gap: 18px; }
 .gr-rcols > div { break-inside: avoid; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gr-reach .good { color: var(--good); } .gr-reach .warn { color: var(--warn); } .gr-reach .bad { color: var(--bad); }
+.gr-ports { padding-left: 1.3em; overflow: hidden; text-overflow: ellipsis; }   /* a client's ports, under its name (25 Nov 2026) */
 /* Shared table sorting (15 Nov 2026): click a title, shift-click for more */
 th.sortable, .table .thead > .sortable { cursor: pointer; user-select: none; }
 th.sortable:hover, .table .thead > .sortable:hover { color: var(--text); }

@@ -17,7 +17,7 @@ import core
 
 from core import (
     FLOW_HISTORY_HOURS, Fields, StateFileError, app, claude_load, claude_lock, claude_public, msp,
-    policy_read_json, public_error, state, wan_networks,
+    policy_read_json, public_error, router_ready, state, wan_networks,
 )
 from router import (
     access_device_protect, compact_policy_rule_for_flow, feature_settings, internet_interface_name,
@@ -3816,6 +3816,8 @@ def patterns_state():
 def patterns_seen(watch):
     """Has the dashboard seen this step done? (Show Me How's own kinds,
     plus a domain rule on a group and Device Active Protect off.)"""
+    if not router_ready():   # just after a start (see howto_seen)
+        return False
     kind = watch.get("kind")
     if kind == "rule" and watch.get("domain"):
         return any(r.get("disabled") is not True and r.get("action") == watch["action"] and r.get("type") == "dns"
@@ -3823,10 +3825,6 @@ def patterns_seen(watch):
                    and str(r.get("target") or "").lower().lstrip("*.") == str(watch["domain"]).lower()
                    for r in (state.get("policy_rules") or {}).get("rules") or [])
     if kind == "dap-off":
-        # Not before the router's clients are read (just after a start the
-        # lookup is empty, which would read as "off" and finish the change).
-        if not access_device_protect:
-            return False
         return str((access_device_protect.get(str(watch.get("mac") or "").upper()) or {}).get("state") or "").lower() not in ("active", "optimizing")
     return howto_seen(watch)
 

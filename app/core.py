@@ -577,6 +577,19 @@ state = {
     "vpn_sites": [],
 }
 
+
+def router_ready():
+    """The router's devices, groups and rules have been read since the
+    dashboard started (groups are published after the devices, in the same
+    read). Until then nothing seems to block anything and nothing seems to
+    exist (17 Nov 2026: right after a restart a printing Need showed
+    Done for a minute, its VqLAN not loaded yet; 25 Nov 2026: Can Talk To
+    showed "no group it can reach" for every group), so no reach check or
+    Show Me How step is believed. The rules entry is there from the start,
+    empty, so its read time is what tells."""
+    return bool(state.get("groups")) and bool((state.get("policy_rules") or {}).get("updated_at"))
+
+
 switch_port_rate_state = {}
 
 # ============================================================

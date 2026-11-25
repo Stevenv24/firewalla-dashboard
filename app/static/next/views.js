@@ -449,11 +449,10 @@
     // Policy buttons: what each one does, shown on hover (owner, 18 Nov
     // 2026; not the Claude buttons). Keyed "action|label".
     const PL_TIPS = {
-        "pl-pick|Allow": "Allow this connection. Press again to clear the choice.",
-        "pl-pick|Block": "Block this connection. Press again to clear the choice.",
-        "pl-pick-all|Allow All": "Allow every row. Press again to clear them.",
-        "pl-pick-all|Block All": "Block every row. Press again to clear them.",
-        "pl-move|Move to Review": "Rows your rules already do, and rows with no choice (the router's rule stays), go to Decided. The rest go to Review as one item.",
+        "pl-pick|Allow": "Allow this connection, now: to Decided if your rules already allow it, else to Review. Undo for a minute at the top.",
+        "pl-pick|Block": "Block this connection, now: to Decided if your rules already block it, else to Review. Undo for a minute at the top.",
+        "pl-pick-all|Allow All": "Allow every row, now: those your rules already allow go to Decided, the rest to Review. Undo for a minute at the top.",
+        "pl-pick-all|Block All": "Block every row, now: those your rules already block go to Decided, the rest to Review. Undo for a minute at the top.",
         "pl-return|Return": "Send this row back to New Connections, with its choice.",
         "pl-return|Return to New": "Send every row back to New Connections, with their choices.",
         "pl-smh|Show Me How": "The steps for this change in the Firewalla app, beside this item.",
@@ -649,7 +648,6 @@
     const plDestPort = r => /random/i.test(r.port || "") ? r.port.replace(/ random ports/i, " Random") : r.port;
     const plHome = it => it.refs?.[0] || it.id;   // what stays the same through every move
     const plItems = new Map();   // id -> item as last drawn (for the buttons)
-    let plFlag = null;   // a New Connections item whose unchosen rows are outlined (No, Let Me Choose)
     let plSmh = null;    // Show Me How open: {id, undo, way, top, tab}
 
     // Ask Claude (owner, 19 and 20 Nov 2026): the only coloured button.
@@ -704,10 +702,12 @@
     const plSources = rows => new Set(rows.map(r => r.src.mac || r.src.name)).size;
     const plWhen = (a, b) => a && b && Math.abs(b - a) > 60 ? `${F.dateTime(a)} – ${F.dateTime(b)}` : F.dateTime(b || a);
 
-    // 1 New Connections (owner, 19 Nov 2026): a pattern group or one
-    // connection; Allow / Block per row (a lighter filled bubble with a
-    // glow, the other fades; again clears), Allow All / Block All in the
-    // column titles, the first 2 rows and "▸ N more", Move to Review.
+    // 1 New Connections (owner, 19 Nov 2026): a connection group (one
+    // source and target, a row per port) or one connection; Allow / Block
+    // per row and Allow All / Block All in the column titles decide at once
+    // (D-1066: Decided when your rules already do it, else Review; Undo at
+    // the top). A row back from Review shows its choice lit. The first 2
+    // rows and "▸ N more".
     function plNewCard(it) {
         const home = plHome(it), open = plOpen.has("more|" + home);
         const many = plSources(it.rows) > 1;
@@ -716,21 +716,20 @@
         const pick = (r, v) => `<button type="button" class="pl-pick ${v}${r.pick === v ? " on" : r.pick ? " off" : ""}" data-view-action="pl-pick" data-value="${F.esc(JSON.stringify([it.id, r.key, v]))}"${plTipAttr("pl-pick", v === "allow" ? "Allow" : "Block")}>${v === "allow" ? "Allow" : "Block"}</button>`;
         const all = v => `<button type="button" class="pl-pick ${v}${every(v) ? " on" : every(v === "allow" ? "block" : "allow") ? " off" : ""}" data-view-action="pl-pick-all" data-value="${F.esc(JSON.stringify([it.id, v]))}"${plTipAttr("pl-pick-all", v === "allow" ? "Allow All" : "Block All")}>${v === "allow" ? "Allow All" : "Block All"}</button>`;
         const rows = open ? it.rows : it.rows.slice(0, 2);
-        const body = rows.map(r => `<tr data-row-id="${F.esc(r.key)}" class="${plFlag === it.id && !r.pick ? "pl-unchosen" : ""}">
+        const body = rows.map(r => `<tr data-row-id="${F.esc(r.key)}">
             <td data-sort="${F.esc(r.rule)}">${plPill(r.rule)}</td>${many ? `<td>${F.esc(r.src.name)}</td>` : ""}<td class="muted">Random</td>
             <td>${r.dst.mac && /:/.test(r.dst.mac) ? F.go(F.esc(r.dst.name), F.target("devices", { mac: r.dst.mac })) : F.esc(r.dst.name)}</td>
             <td class="nowrap">${F.esc(plDestPort(r))}</td><td class="nowrap">${plCounts(r)}</td>
             <td data-sort="${r.pick === "allow" ? 1 : 0}">${pick(r, "allow")}</td><td data-sort="${r.pick === "block" ? 1 : 0}">${pick(r, "block")}</td>
             <td>${sug[r.key] ? `<span class="pl-sug ${sug[r.key]}">${sug[r.key] === "allow" ? "Allow" : "Block"}</span>` : `<span class="small muted">${asked ? "--" : "Ask Claude"}</span>`}</td>
             <td>${btn("pl-ret", "pl-delete-rows", JSON.stringify([it.id, r.key]), "Delete", PL_TIPS["pl-delete-rows|Delete"])}</td></tr>`).join("");
-        const chosen = it.rows.filter(r => r.pick).length;
         return `<article class="pl-card st-new${plFocusOf(it) ? " pl-focus" : ""}" data-busy-scope data-pl-item="${F.esc(it.id)}">
             <div class="pl-card-head">${it.tag ? `<span class="pl-tag warn">${F.esc(it.tag)}</span>` : ""}<strong>${F.esc(it.title)}</strong><span class="pl-when">${plWhen(it.first, it.last)}</span></div>
             ${plWhy(it.why, home)}
             <table class="pl-table"><thead><tr><th>Router Rule</th>${many ? "<th>Source</th>" : ""}<th>Source Port</th><th>Dest</th><th>Dest Port</th><th>Connections</th>
                 <th>${all("allow")}</th><th>${all("block")}</th><th>Claude Suggests</th><th>Delete</th></tr></thead><tbody>${body}</tbody></table>
             ${it.rows.length > 2 ? `<a href="#" class="pl-more" data-view-action="pl-toggle" data-value="${F.esc("more|" + home)}">${open ? "▾ Show only the first 2" : `▸ ${it.rows.length - 2} more connection${it.rows.length - 2 === 1 ? "" : "s"}`}</a>` : ""}
-            <div class="pl-acts">${btn("pl-act", "pl-move", it.id, "Move to Review", PL_TIPS["pl-move|Move to Review"])}${btn("pl-act", "pl-delete-rows", JSON.stringify([it.id]), "Delete", PL_TIPS["pl-delete|Delete"])}${plAskButton(it)}<span class="pl-count">${chosen} of ${it.rows.length} chosen</span></div>
+            <div class="pl-acts">${btn("pl-act", "pl-delete-rows", JSON.stringify([it.id]), "Delete", PL_TIPS["pl-delete|Delete"])}${plAskButton(it)}</div>
             ${plConvoBlock(it)}
         </article>`;
     }
@@ -994,32 +993,15 @@
                 if (v && !waiting) plMarkRead(plHome(item), plLastAnswer(v));
                 return null;
             }
+            // Allow / Block decide at once (D-1066): the row, or every row for Allow All / Block All.
             if (action === "pl-pick" || action === "pl-pick-all") {
                 const [id, ...rest] = JSON.parse(value);
                 const it = plItems.get(id);
                 if (!it) return null;
-                if (action === "pl-pick") {
-                    const [key, v] = rest, row = it.rows.find(r => r.key === key);
-                    return plMsg(await post("/api/policy/pick", { keys: [key], pick: row?.pick === v ? null : v }));
-                }
-                const [v] = rest;
-                return plMsg(await post("/api/policy/pick", { keys: it.rows.map(r => r.key), pick: it.rows.every(r => r.pick === v) ? null : v }));
+                const [keys, v] = action === "pl-pick" ? [[rest[0]], rest[1]] : [it.rows.map(r => r.key), rest[0]];
+                return plMsg(await post("/api/policy/decide", { item: id, keys, pick: v }));
             }
-            if (action === "pl-move" && item) {
-                const missing = item.rows.filter(r => !r.pick).length;
-                if (missing) {
-                    const go = await plDialog("Some Rows Have No Choice",
-                        `${missing} of ${item.rows.length} row${item.rows.length === 1 ? "" : "s"} ${missing === 1 ? "has" : "have"} no Allow or Block chosen.\nIf you continue, the router's existing rule for those connections stays unchanged. Do you want to continue?`,
-                        [["yes", "Yes, Continue", true], ["no", "No, Let Me Choose"]]);
-                    if (go !== "yes") {
-                        plFlag = item.id;
-                        plOpen.add("more|" + plHome(item));
-                        return null;
-                    }
-                }
-                plFlag = null;
-                return plMsg(await post("/api/policy/move", { item: item.id }));
-            }
+            if (action === "pl-undo") return plMsg(await post("/api/policy/undo", { at: Number(value) }));
             if (action === "pl-return") {
                 const [id, key] = JSON.parse(value);
                 return plMsg(await post("/api/policy/flow", { id, action: "return", keys: key ? [key] : undefined }));
@@ -1181,7 +1163,7 @@
         const banner = stopped ? `<div class="pl-stopped-ban" role="status"><b>MONITORING STOPPED</b> since ${F.dateTime(stopped)} · no new New Connections cards, Violations, nightly review or Policy alerts · Review, Pending Action and Pending Confirmation carry on${on === "policy" ? " · turn the slider off to start again" : ` · turn it back on at the top of ${F.go("New Connections Review", "policy")}`}</div>` : "";
         return `<div class="pl-monitor">${slider}${banner}</div>`;
     };
-    const plTop = (x, on) => `${plMonitor(x, on)}<div class="pl-top">${x.msgs.map(m => `<div class="pl-msg" role="status">${F.esc(m.text)}<a href="#" data-view-action="pl-msg-close" data-value="${m.at}" aria-label="Dismiss">✕</a></div>`).join("")}
+    const plTop = (x, on) => `${plMonitor(x, on)}<div class="pl-top">${x.msgs.map(m => `<div class="pl-msg" role="status">${F.esc(m.text)}${m.undo && Date.now() / 1000 - m.at < 60 ? ` <a href="#" class="pl-undo" data-view-action="pl-undo" data-value="${m.at}">Undo</a>` : ""}<a href="#" data-view-action="pl-msg-close" data-value="${m.at}" aria-label="Dismiss">✕</a></div>`).join("")}
         ${F.go(`Decided (${F.count(x.page.decided_count || 0)}) →`, "decided", "pl-decided small")}</div>`;
     // The five tiles (owner, 22 Nov 2026): on New Connections Review,
     // Violations comes last and opens the Violations page; on Violations it
@@ -3777,7 +3759,9 @@
                 v.unsure ? `<span class="warn" ${full ? `data-tip="Not certain: Check (Show Me How, Every Pair) explains why"` : ""}>⚠</span>` : "",
                 full && v.why ? F.esc(v.why) : "",
                 full && v.check ? F.go("check", F.howtoPair(v.check, v.mac, { every: 1, pair: `${String(v.check).toUpperCase()}>${String(v.mac).toUpperCase()}` })) : ""].filter(Boolean).join(" · ");
-            return `<span class="${v.tone}">${GR_MARK[v.tone]} ${full ? `<a href="#" class="${v.tone}" data-client="${F.esc(v.mac)}">${F.esc(name)}</a>` : F.esc(name)}</span> <span class="muted">· ${bits}</span>`;
+            // Ports on a line of their own (owner, 25 Nov 2026): the ports a target list limits it to, or All Ports.
+            const ports = !v.ports ? "" : `<div class="gr-ports">Ports: ${v.ports.length ? F.esc(v.ports.join("; ")) + (v.every_port ? ` <span class="muted">· All Ports for some members</span>` : "") : "All Ports"}</div>`;
+            return `<span class="${v.tone}">${GR_MARK[v.tone]} ${full ? `<a href="#" class="${v.tone}" data-client="${F.esc(v.mac)}">${F.esc(name)}</a>` : F.esc(name)}</span> <span class="muted">· ${bits}</span>${ports}`;
         };
         const list = t.devs.length ? `<div class="gr-rcols">${t.devs.slice().sort((p, q) => String(x.names[p.mac] || p.mac).localeCompare(String(x.names[q.mac] || q.mac))).map(v => `<div>${dev(v)}</div>`).join("")}</div>` : `<div class="muted">No members</div>`;
         return `<div class="gr-reach"><div class="tip-sub">${F.esc(sub)}</div>${list}</div>`;
