@@ -11,10 +11,9 @@ config/
 *.db-shm
 *.db-wal
 __pycache__/
-# - Show Me How pictures and product photos: the current ones show the
-#   owner's network (names, addresses) or may be Firewalla's own pictures.
-#   Kept here for testing only, until new ones from a demo account replace
-#   them (shareable-edition-plan.md, sections 1e and 7d).
-app/static/next/img/howto/
+# - Product photos: they look like Firewalla's own pictures, so they are
+#   not handed out (a Gold Pro then gets a drawn front panel). The Show Me
+#   How pictures in img/howto ARE published: cleaned of every personal
+#   detail on 24 Nov 2026 (their README says how).
 app/static/next/img/gold-pro-front.png
 app/static/next/img/switch-x-front.png
