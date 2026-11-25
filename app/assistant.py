@@ -17,7 +17,7 @@ import core
 
 from core import (
     CLAUDE_BATCH_DAILY_CAP, CLAUDE_DAILY_CAP, CLAUDE_KINDS, CLAUDE_STATE_FILE,
-    DEFAULT_OFFLINE_IDLE_SECONDS, FLOW_HISTORY_HOURS, Fields, SITE_NAME, SITE_OTHERS, app, claude_load, claude_lock, claude_public, claude_today, claude_worker, log_safe,
+    DEFAULT_OFFLINE_IDLE_SECONDS, FLOW_HISTORY_HOURS, Fields, SITE_NAME, SITE_OTHERS, app, claude_load, claude_lock, claude_public, claude_running, claude_today, claude_worker, log_safe,
     site_mail_name,
     claude_answer_fill, claude_reply_format, claude_usage_publish, CLAUDE_STYLE, CLAUDE_STYLE_MARK,
     policy_read_json, public_error, state,
@@ -1608,10 +1608,10 @@ def api_questions(thread: int = None, q: str = None):
     with claude_lock:
         st = claude_load()
     today = st["usage"].get(claude_today(), {})
-    seen = (st.get("worker") or {}).get("seen_at") or 0
+    running, off = claude_running(st)
     return {"threads": threads, "messages": messages, "asked_today": today.get("asked", 0), "cap": CLAUDE_DAILY_CAP,
             "next_batch": (st.get("batch_at") or time.time()) + CLAUDE_BATCH_EVERY,
-            "worker_up": time.time() - seen < 90, "new": sum(1 for t in threads if t["unread"]), "now": time.time()}
+            "worker_up": running, "ask_off": off, "new": sum(1 for t in threads if t["unread"]), "now": time.time()}
 
 
 @app.get("/api/questions/on-items")
@@ -2322,12 +2322,12 @@ def digest_public(pick=None):
     if pending and days and str(pending.get("ref") or "") < days[0]:
         pending = None
     day = pick if pick in days else (days[0] if days else None)
-    seen = (st.get("worker") or {}).get("seen_at") or 0
+    running, off = claude_running(st)
     return {"day": day, "answer": st["answers"].get(f"digest:{day}") if day else None,
             "days": [{"day": d, "summary": st["answers"][f"digest:{d}"].get("summary"),
                       "needs": len(st["answers"][f"digest:{d}"].get("needs_you") or [])} for d in days],
             "pending": {k: pending.get(k) for k in ("ref", "status", "error", "asked_at", "by")} if pending else None,
-            "hour": digest_settings()["hour"], "on": digest_settings()["on"], "mail_ready": digest_mail_settings() is not None, "worker_up": time.time() - seen < 90}
+            "hour": digest_settings()["hour"], "on": digest_settings()["on"], "mail_ready": digest_mail_settings() is not None, "worker_up": running, "ask_off": off}
 
 
 @app.post("/api/digest/settings")

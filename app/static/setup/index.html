@@ -163,19 +163,56 @@
         <!-- Step 5 -->
         <section id="s5" class="card step" hidden>
             <h2>5. Email Alerts (Optional)</h2>
-            <p>For the daily digest and alerts by email, through your Gmail account. You need a Gmail "app password", not your normal password.</p>
-            <ol class="steps">
-                <li>Your Google account needs <strong>2-Step Verification</strong> turned on (Google Account › Security).</li>
+            <p>For the daily digest and alerts by email. The dashboard sends them from an email account of yours; they can go to any address.</p>
+            <div class="warnbox"><strong>You need an "app password" from your email provider, not your normal email password.</strong>
+                An app password is a separate password that your email provider (Google, Apple, Yahoo...) makes for one outside app, such as this dashboard. It only lets that app send email, and you can delete it in your email account at any time without changing your normal password.</div>
+            <label for="mailProvider">Your Email Provider</label>
+            <select id="mailProvider">
+                <option value="gmail">Gmail (Google)</option>
+                <option value="icloud">iCloud Mail (Apple)</option>
+                <option value="yahoo">Yahoo Mail</option>
+                <option value="other">Another provider</option>
+            </select>
+            <ol class="steps" data-provider="gmail">
+                <li>Your Google account needs <strong>2-Step Verification</strong> turned on (Google Account › <strong>Security</strong>).</li>
                 <li>Go to <strong>myaccount.google.com/apppasswords</strong> and sign in.</li>
-                <li>Type "Firewalla Dashboard" as the name and click <strong>Create</strong>.</li>
-                <li>Copy the 16-letter password Google shows (the spaces don't matter).</li>
+                <li>Type "Firewalla Dashboard" as the app's name and click <strong>Create</strong>.</li>
+                <li>Google shows a 16-letter app password. Copy it (the spaces don't matter).</li>
                 <li>Fill in the boxes below and click <strong>Send Test Email</strong>.</li>
             </ol>
-            <div class="shot">Picture to come: Google › App passwords, with the 16-letter password</div>
-            <label for="gmail">Your Gmail Address</label>
+            <ol class="steps" data-provider="icloud" hidden>
+                <li>Your Apple Account needs <strong>two-factor authentication</strong> turned on.</li>
+                <li>Go to <strong>account.apple.com</strong> and sign in.</li>
+                <li>Open <strong>Sign-In and Security</strong> › <strong>App-Specific Passwords</strong>.</li>
+                <li>Click <strong>+</strong>, name it "Firewalla Dashboard" and click <strong>Create</strong>.</li>
+                <li>Apple shows an app-specific password like <code>abcd-efgh-ijkl-mnop</code>. Copy it.</li>
+                <li>Fill in the boxes below (send from your full iCloud address, for example you@icloud.com) and click <strong>Send Test Email</strong>.</li>
+            </ol>
+            <ol class="steps" data-provider="yahoo" hidden>
+                <li>Sign in at <strong>login.yahoo.com</strong> and open <strong>Account Info</strong> › <strong>Account Security</strong>.</li>
+                <li>Click <strong>Generate app password</strong> (or <strong>Generate and manage app passwords</strong>).</li>
+                <li>Name it "Firewalla Dashboard" and click <strong>Generate password</strong>.</li>
+                <li>Yahoo shows a 16-letter app password. Copy it.</li>
+                <li>Fill in the boxes below and click <strong>Send Test Email</strong>.</li>
+            </ol>
+            <ol class="steps" data-provider="other" hidden>
+                <li>In your email account's security settings, make an <strong>app password</strong> (it may be called "app-specific password" or "third-party app password") for "Firewalla Dashboard". Your provider's help pages explain where.</li>
+                <li>Look up your provider's <strong>outgoing mail (SMTP) server</strong> and <strong>port</strong> (465 or 587) in its help pages.</li>
+                <li>Fill in the boxes below and click <strong>Send Test Email</strong>.</li>
+            </ol>
+            <p class="muted">The menu names above come from each provider's help pages and may differ slightly on your screen.</p>
+            <div class="shot">Picture to come: your provider's app password page, with the new password</div>
+            <div id="mailServer" hidden>
+                <label for="mailHost">Outgoing Mail (SMTP) Server</label>
+                <input id="mailHost" placeholder="smtp.example.com">
+                <label for="mailPort">Port</label>
+                <select id="mailPort"><option value="465">465</option><option value="587">587</option></select>
+            </div>
+            <label for="gmail">Your Email Address (Sent From)</label>
             <input id="gmail" type="email" placeholder="you@gmail.com">
-            <label for="appPw">App Password</label>
-            <input id="appPw" type="password" autocomplete="off" placeholder="16 letters">
+            <label for="appPw">App Password From Your Email Provider</label>
+            <input id="appPw" type="password" autocomplete="off" placeholder="not your normal email password">
+            <div class="hint">The app password your email provider made for this dashboard in the steps above.</div>
             <label for="mailTo">Send the Emails To</label>
             <input id="mailTo" type="email" placeholder="the same address, or another">
             <div class="row"><button class="primary" data-do="s5">Send Test Email</button><button data-go="6">Skip</button></div>
@@ -185,18 +222,42 @@
         <!-- Step 6 -->
         <section id="s6" class="card step" hidden>
             <h2>6. Ask Claude (Optional)</h2>
-            <p>Claude can explain findings in plain words. It only reads the facts the dashboard gives it and writes text; it can't change anything. The dashboard works fully without it.</p>
-            <div class="warnbox">Use an <strong>API key from the Claude Console</strong>. Don't use a Claude Pro or Max sign-in: Anthropic's terms don't allow that for an app like this.</div>
+            <p>The dashboard works fully without this step. With it, Claude (Anthropic's AI) explains what the dashboard finds, in plain words.</p>
+
+            <h3>What It Gives You</h3>
+            <ul>
+                <li><strong>Ask buttons</strong> on findings (new connections, alarms, internet patterns, equipment problems): what happened, the likely reason, and which choice Claude would make.</li>
+                <li><strong>Questions page:</strong> ask anything about your network, with follow-up questions.</li>
+                <li><strong>Hourly check:</strong> new findings are explained ahead of time, so the answer is often already there.</li>
+                <li><strong>Daily digest:</strong> a short summary of the day each morning (by email too, if you set up step 5).</li>
+                <li><strong>Nightly review</strong> of the choices you made, flagging any that look out of date.</li>
+            </ul>
+            <p>Claude only reads the facts the dashboard hands it and writes text back. It can't change anything on your router or network, and it doesn't browse or run anything.</p>
+
+            <h3>What an API Key Is</h3>
+            <p>An API key lets an app (this dashboard) use Claude on your account, paid by use. It comes from the <strong>Claude Console</strong>, Anthropic's site for developers, which is separate from the claude.ai chat app.</p>
+            <div class="warnbox">A Claude <strong>Pro or Max subscription doesn't cover this</strong>, and its sign-in can't be used here: Anthropic's terms don't allow other apps to use a subscription. The Console account is separate and paid by use.</div>
+
+            <h3>What It Costs</h3>
+            <ul>
+                <li>You pay only for what is used: each answer costs about <strong>2 to 5 cents</strong>. (Anthropic charges by "tokens", pieces of words: for Claude Sonnet, $2 per million tokens read and $10 per million written.)</li>
+                <li>A home network typically costs <strong>about $5 to $20 a month</strong>.</li>
+                <li>The dashboard's own daily limits (40 Ask Now questions and 24 hourly checks) keep it under <strong>about $60 a month</strong> even when used a lot.</li>
+                <li>You buy credit ahead (prepaid), and the <strong>monthly spend limit</strong> you set in the Console is a hard cap. When the credit or limit runs out, Claude simply stops answering; the rest of the dashboard carries on.</li>
+                <li>The dashboard's Settings page shows an estimate of each day's cost; the Console shows the real bill.</li>
+            </ul>
+
+            <h3>How To Get Your Key</h3>
             <ol class="steps">
                 <li>Go to <strong>console.anthropic.com</strong> and make an account (or sign in).</li>
                 <li>Open <strong>Billing</strong>, add a card and buy some credit, for example $10.</li>
                 <li>Open <strong>Limits</strong> and set a monthly spend limit, for example $20. That is your safety cap.</li>
-                <li>Open <strong>API Keys</strong>, click <strong>Create Key</strong>, name it "Dashboard" and copy it (it is shown only once).</li>
-                <li>Paste it below and click <strong>Save</strong>.</li>
+                <li>Open <strong>API Keys</strong>, click <strong>Create Key</strong>, name it "Dashboard" and copy it. It is shown only once: if you lose it, delete it and make a new one.</li>
+                <li>Paste it below and click <strong>Save</strong>. The dashboard checks it with Anthropic (free) and tells you if it works.</li>
             </ol>
             <div class="shot">Picture to come: Claude Console › Limits, with a monthly spend limit</div>
             <div class="shot">Picture to come: Claude Console › API Keys › Create Key</div>
-            <p class="muted">Rough cost: about $5 to $20 a month for a home network; the dashboard's daily limits keep it under about $60 even when used a lot.</p>
+            <p class="muted">Keep the key private, like a password: it is saved only on this NAS. To stop Claude at any time, delete the key in the Console.</p>
             <label for="apiKey">Anthropic API Key</label>
             <input id="apiKey" type="password" autocomplete="off" placeholder="sk-ant-…">
             <div class="row"><button class="primary" data-do="s6">Save</button><button data-go="7">Skip</button></div>
@@ -310,7 +371,8 @@ async function act(what, button) {
             $("s4Result").innerHTML = r.ok ? line(true, r.note) + `<div class="row"><button class="primary" data-go="5">Continue</button></div>` : line(false, r.error);
             await refresh();
         } else if (what === "s5") {
-            const r = await api("/api/setup/mail", { user: $("gmail").value, app_password: $("appPw").value, to: $("mailTo").value });
+            const r = await api("/api/setup/mail", { provider: $("mailProvider").value, user: $("gmail").value, app_password: $("appPw").value,
+                                                     to: $("mailTo").value, host: $("mailHost").value, port: $("mailPort").value });
             $("appPw").value = "";
             $("s5Result").innerHTML = r.ok ? line(true, r.note) + `<div class="row"><button class="primary" data-go="6">Continue</button></div>` : line(false, r.error);
             await refresh();
@@ -382,6 +444,14 @@ document.addEventListener("click", e => {
     if (!target) return;
     if (target.dataset.go) go(Number(target.dataset.go));
     else act(target.dataset.do, target);
+});
+// Email step: the chosen provider's own steps, and the server boxes only for "Another provider".
+const MAIL_HINTS = { gmail: "you@gmail.com", icloud: "you@icloud.com", yahoo: "you@yahoo.com", other: "you@example.com" };
+$("mailProvider").addEventListener("change", () => {
+    const p = $("mailProvider").value;
+    document.querySelectorAll("[data-provider]").forEach(el => { el.hidden = el.dataset.provider !== p; });
+    $("mailServer").hidden = p !== "other";
+    $("gmail").placeholder = MAIL_HINTS[p];
 });
 $("code").addEventListener("keydown", e => { if (e.key === "Enter") act("sign", document.querySelector('[data-do="sign"]')); });
 refresh().catch(() => { document.body.innerHTML = "<p style='padding:30px'>The dashboard didn't answer. Refresh this page in a moment.</p>"; });

@@ -492,6 +492,9 @@
         dismiss: "Dismiss", mark_normal: "Mark Normal", keep_watching: "Keep Watching", act_in_app: "Change Something in the Firewalla App",
         nothing_needed: "Nothing Needed", allow_a_domain: "Allow One Domain", test_the_site: "Test a Website", look_further: "Look Further",
         normal: "Normal", needs_attention: "Needs Attention", carry_on: "Carry On", look_again: "Look Again" };
+    // Without a working Anthropic API key (setup step 6) Claude answers nothing: every waiting
+    // message says so instead of "waiting" (the page data's ask_off, core.py claude_running).
+    const CLAUDE_OFF = "Ask Claude is off: there is no working Anthropic API key yet. Add one at /setup (step 6); questions asked now are answered once it is on.";
     const aiBusy = cl => Object.values(cl?.items || {}).some(e => e.status === "queued" || e.status === "working");
     // triesNow (Policy): the card's tries now. An answer is never asked again
     // by itself (owner, 18 Nov 2026): once the tries it rested on doubled, it
@@ -502,7 +505,7 @@
         if (e.status === "queued" || e.status === "working") {
             return `<div class="ai-box small"><span class="ai-spin" aria-hidden="true"></span> ${cl.worker_up
                 ? (e.status === "working" ? "Claude is looking at this (about 20 to 60 seconds)…" : "Waiting for Claude…")
-                : "Waiting for Claude: it isn't running on the NAS right now, so the question waits until it is."}</div>`;
+                : cl.ask_off ? CLAUDE_OFF : "Waiting for Claude: it isn't running on the NAS right now, so the question waits until it is."}</div>`;
         }
         const a = e.answer;
         if (!a && e.hourly) return `<div class="ai-box small"><span class="ai-spin" aria-hidden="true"></span> In this hour's question to Claude: the answer shows here in a few minutes.</div>`;
@@ -7932,7 +7935,7 @@ ${lines.map(l => `<span class="${adding ? "msp-add" : "msp-del"}">${F.esc(l)}</s
                 ${(s.messages || []).map(m => m.role === "you"
                     ? `<div class="q-msg q-you"><div class="q-who">You · ${F.dateTime(m.at)}</div><div>${F.esc(m.text || "")}</div>
                         ${m.status === "hourly" || m.status === "batched" ? `<div class="small muted">Waiting for the hourly answer${s.next_batch ? ` (about ${F.time(s.next_batch)})` : ""} · ${btn("plain ai", "q-now-msg", String(m.id), "Ask Now")}${m.error ? `<br><span class="warn">${F.esc(m.error)}</span>` : ""}</div>` : ""}
-                        ${m.status === "queued" || m.status === "working" ? `<div class="small muted"><span class="ai-spin"></span> ${s.worker_up ? "Claude is answering (about a minute)…" : "Waiting for Claude: it isn't running on the NAS right now."}</div>` : ""}
+                        ${m.status === "queued" || m.status === "working" ? `<div class="small muted"><span class="ai-spin"></span> ${s.worker_up ? "Claude is answering (about a minute)…" : s.ask_off ? CLAUDE_OFF : "Waiting for Claude: it isn't running on the NAS right now."}</div>` : ""}
                         ${m.status === "error" ? `<div class="small bad">Claude couldn't answer: ${F.esc(m.error || "")}. Ask again to retry.</div>` : ""}</div>`
                     : `<div class="q-msg q-claude"><div class="q-who">Claude · ${F.dateTime(m.at)}</div>${qAnswer(m.answer)}</div>`).join("")}
                 <textarea class="q-follow-text" data-keep-text="follow-${open.id}" rows="2" placeholder="Ask a follow-up…"></textarea>
@@ -7940,6 +7943,7 @@ ${lines.map(l => `<span class="${adding ? "msp-add" : "msp-del"}">${F.esc(l)}</s
             </section>` : `<section class="st-box q-panel"><div class="muted small">Click a question to see the conversation and ask a follow-up.</div></section>`;
             return `<div class="status-view q-view">
                 <section class="st-box q-askbox" data-busy-scope>
+                    ${s.ask_off ? `<div class="warn">${CLAUDE_OFF}</div>` : ""}
                     <div class="q-ask-row"><textarea class="q-main-text" rows="2" placeholder="Ask Claude anything about your network…"></textarea>${btn("plain ai", "q-ask", "1", "Ask")}${btn("plain", "q-ask", "1|now", "Ask Now")}</div>
                     <div class="small muted">Ask: answered with the hourly check${s.next_batch ? ` (next about ${F.time(s.next_batch)})` : ""}, the least use of your Claude allowance · Ask Now: in about a minute, ${s.asked_today} of ${s.cap} used today · Claude also gets your equipment, groups, a rules summary, recent changes, alarms and your related past questions${s.worker_up ? "" : ` · <span class="warn">Claude isn't running on the NAS right now: questions wait until it is</span>`}</div>
                 </section>

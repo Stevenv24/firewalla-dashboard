@@ -562,25 +562,58 @@ def api_setup_msp(request: Request, payload: dict = Body(default={})):
 
 # ---------- step 5: email ----------
 
+# The providers the setup page names, with their outgoing mail servers.
+# Each needs an APP PASSWORD: a separate password the provider makes for one
+# outside app, never the account's normal password. "Other" takes any
+# provider's server and port.
+MAIL_PROVIDERS = {
+    "gmail": {"name": "Gmail", "host": "smtp.gmail.com", "port": "465", "pattern": "letters16"},
+    "icloud": {"name": "iCloud Mail", "host": "smtp.mail.me.com", "port": "587", "pattern": "apple"},
+    "yahoo": {"name": "Yahoo Mail", "host": "smtp.mail.yahoo.com", "port": "465", "pattern": "letters16"},
+    "other": {"name": "Other", "host": "", "port": "", "pattern": ""},
+}
+
+
 @app.post("/api/setup/mail")
 def api_setup_mail(request: Request, payload: dict = Body(default={})):
     if not setup_signed_in(request):
         return setup_refuse()
+    provider = MAIL_PROVIDERS.get(str(payload.get("provider") or "gmail"))
+    if not provider:
+        return {"ok": False, "error": "Pick your email provider from the list."}
     user = str(payload.get("user") or "").strip()
     password = re.sub(r"\s", "", str(payload.get("app_password") or ""))
     to = str(payload.get("to") or "").strip() or user
     email = re.compile(r"^[^@\s,;]+@[^@\s,;]+\.[A-Za-z]{2,}$")
     if not email.match(user) or not email.match(to):
-        return {"ok": False, "error": "Type your Gmail address (and the address the emails go to)."}
-    if not re.fullmatch(r"[A-Za-z]{16}", password):
-        return {"ok": False, "error": "A Gmail app password is 16 letters. Copy it again from Google."}
-    setup_write_file("mail_settings", f"host=smtp.gmail.com\nport=465\nuser={user}\npassword={password}\nto={to}\n")
+        return {"ok": False, "error": "Type the email address you send from (and the address the emails go to)."}
+    if provider["host"]:
+        host, port = provider["host"], provider["port"]
+        if provider["pattern"] == "letters16":
+            password = password.replace("-", "")
+            if not re.fullmatch(r"[A-Za-z]{16}", password):
+                return {"ok": False, "error": f"A {provider['name']} app password is 16 letters. Make one again in your "
+                                             f"{provider['name']} account and copy it here (not your normal password)."}
+        elif not re.fullmatch(r"[A-Za-z]{4}-?[A-Za-z]{4}-?[A-Za-z]{4}-?[A-Za-z]{4}", password):
+            return {"ok": False, "error": "An Apple app-specific password looks like abcd-efgh-ijkl-mnop. Make one again "
+                                         "in your Apple Account and copy it here (not your normal password)."}
+    else:
+        host = str(payload.get("host") or "").strip().lower()
+        port = str(payload.get("port") or "").strip()
+        if not re.fullmatch(r"[a-z0-9.\-]{4,100}", host) or "." not in host:
+            return {"ok": False, "error": "Type your provider's outgoing mail (SMTP) server, like smtp.example.com."}
+        if port not in ("465", "587"):
+            return {"ok": False, "error": "The port is 465 or 587: your provider's help pages name it."}
+        if not password or len(password) > 200 or "\n" in password:
+            return {"ok": False, "error": "Paste the app password your email provider made for this dashboard."}
+    setup_write_file("mail_settings", f"host={host}\nport={port}\nuser={user}\npassword={password}\nto={to}\n")
     from assistant import digest_mail_send
     text = "This is the Firewalla dashboard's test email. If you can read it, email alerts and the daily digest will reach you."
     try:
         digest_mail_send("Firewalla Dashboard: test email", text, f"<p>{text}</p>", to=to)
     except Exception as exc:
-        return {"ok": False, "error": f"Saved, but the test email failed: {str(exc)[:200]}. Check the app password and try again."}
+        return {"ok": False, "error": f"Saved, but the test email failed: {str(exc)[:200]}. Check it is an app password made by your "
+                                     "email provider for this dashboard (not your normal password), and try again."}
     return {"ok": True, "note": f"A test email went to {to}. Check your inbox."}
 
 

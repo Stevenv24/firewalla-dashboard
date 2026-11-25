@@ -813,6 +813,17 @@ def claude_today():
     return datetime.now().strftime("%Y-%m-%d")
 
 
+def claude_running(st):
+    """(running, off) for every page: off when the worker reports no API key
+    or a key Anthropic refused (Ask Claude is off until one is added in
+    setup step 6); running when it was seen in the last 90 seconds and isn't
+    off. The worker still reports in without a key, so seen alone isn't
+    enough."""
+    worker = st.get("worker") or {}
+    off = worker.get("key_state") in ("missing", "refused")
+    return time.time() - (worker.get("seen_at") or 0) < 90 and not off, off
+
+
 def claude_public(st, kind=None):
     """What the pages show: each answer and question in progress, today's
     use against the cap, and whether the worker is running."""
@@ -836,7 +847,7 @@ def claude_public(st, kind=None):
     return {"items": out, "today": {"asked": today.get("asked", 0), "answered": today.get("answered", 0), "batch": today.get("batch", 0),
                                     "digest": today.get("digest", 0), "cost_usd": round(today.get("cost_usd", 0.0), 4)},
             "cap": CLAUDE_DAILY_CAP, "batch_cap": CLAUDE_BATCH_DAILY_CAP, "batch_at": st.get("batch_at"),
-            "worker_seen": seen, "worker_up": time.time() - seen < 90,
+            "worker_seen": seen, "worker_up": claude_running(st)[0], "ask_off": claude_running(st)[1],
             "queued": sum(1 for q in st["questions"] if q["status"] in ("queued", "working"))}
 
 
