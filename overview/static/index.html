@@ -40,6 +40,11 @@ header {
     padding: 20px 16px 8px; max-width: 1400px; margin: 0 auto;
 }
 h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+.head-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#siteSelect {
+    font: 600 14px system-ui, sans-serif; color: var(--text); background: var(--card);
+    border: 1px solid var(--line-strong); border-radius: 8px; padding: 6px 10px; cursor: pointer;
+}
 .updated { color: var(--muted); font-size: 13px; }
 main { padding: 8px 16px 32px; max-width: 1400px; margin: 0 auto; }
 
@@ -107,7 +112,10 @@ main { padding: 8px 16px 32px; max-width: 1400px; margin: 0 auto; }
 <body>
 <header>
     <h1>Firewalla Overview</h1>
-    <span class="updated" id="updated">Loading…</span>
+    <div class="head-right">
+        <select id="siteSelect" aria-label="Firewalla" hidden></select>
+        <span class="updated" id="updated">Loading…</span>
+    </div>
 </header>
 <main>
     <div id="banner"></div>
@@ -243,6 +251,17 @@ async function refresh() {
     setTimeout(refresh, pollMs);
 }
 refresh();
+
+// Selector (when served by the gateway): pick a router to open its full
+// dashboard, or stay here on "All Firewallas".
+fetch("/_fw/sites.json", {cache: "no-cache"}).then((r) => r.ok ? r.json() : []).then((sites) => {
+    if (!Array.isArray(sites) || !sites.length) return;
+    const sel = $("siteSelect");
+    for (const s of sites) sel.add(new Option(s.name, s.id));
+    sel.add(new Option("All Firewallas (overview)", "", true, true));
+    sel.hidden = false;
+    sel.addEventListener("change", () => { if (sel.value) location.href = "/site/" + encodeURIComponent(sel.value); });
+}).catch(() => {});
 </script>
 </body>
 </html>

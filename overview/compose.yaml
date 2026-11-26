@@ -1,7 +1,39 @@
-# Firewalla Overview: one page summarizing every dashboard copy.
+# Firewalla gateway + Overview: one address for every dashboard copy.
+#   http://<host>:8179/          the full dashboard of the router picked in
+#                                its selector (cookie-routed by the gateway)
+#   http://<host>:8179/all/      the Overview: all routers on one page
 # Run from this folder:  docker compose up -d --build
 # Settings come from .env next to this file (see .env.example).
 services:
+  gateway:
+    image: nginx:1.27.5-alpine
+    container_name: ${GATEWAY_NAME:-fwdash-gateway}
+    restart: unless-stopped
+    # Plain nginx with our config; skips the image's start scripts, which
+    # want to edit files in a read-only container.
+    entrypoint: ["nginx", "-g", "daemon off;"]
+    user: "101:101"
+    depends_on:
+      - overview
+    ports:
+      - "${PORT:-8179}:8080"
+    networks:
+      - default
+      - home
+      - jb
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    pids_limit: 64
+    mem_limit: 128m
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./gateway:/gateway:ro
+
   overview:
     build: .
     container_name: ${CONTAINER_NAME:-fwdash-overview}
@@ -9,10 +41,10 @@ services:
     environment:
       SITES: ${SITES:?Set SITES in .env}
       POLL_SECONDS: ${POLL_SECONDS:-10}
-    ports:
-      - "${PORT:-8179}:8080"
-    # Reads the copies over their own Docker networks (http://<container>:8080).
+    # No port of its own: the gateway serves it at /all/. It reads the
+    # copies over their own Docker networks (http://<container>:8080).
     networks:
+      - default
       - home
       - jb
     # Same lock-down as the dashboard: nothing writable, no special powers.
@@ -30,7 +62,8 @@ services:
       - ./static:/overview/static:ro
 
 # The networks the dashboard copies' projects create (<project>_default).
-# A new copy: add it here and under networks: above, and to SITES.
+# A new copy: add it here and under both services' networks:, to SITES, and
+# to gateway/nginx.conf + gateway/sites.json.
 networks:
   home:
     name: ${HOME_NETWORK:-fwdash-home_default}

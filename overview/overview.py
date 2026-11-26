@@ -8,7 +8,8 @@
 #
 # Sites come from SITES: "Name|status base URL|page URL" entries separated by
 # commas, e.g.
-#   SITES=Home|http://fwdash-home:8080|http://192.168.23.70:8180/next,JB|http://fwdash-jb:8080|http://192.168.23.70:8181/next
+#   SITES=Home|http://fwdash-home:8080|/site/home,Just Because|http://fwdash-jb:8080|/site/jb
+# (/site/<id> is the gateway's switch link; any URL works.)
 
 import os
 import threading
