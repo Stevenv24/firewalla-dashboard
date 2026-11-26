@@ -1,0 +1,40 @@
+# Firewalla Overview: one page summarizing every dashboard copy.
+# Run from this folder:  docker compose up -d --build
+# Settings come from .env next to this file (see .env.example).
+services:
+  overview:
+    build: .
+    container_name: ${CONTAINER_NAME:-fwdash-overview}
+    restart: unless-stopped
+    environment:
+      SITES: ${SITES:?Set SITES in .env}
+      POLL_SECONDS: ${POLL_SECONDS:-10}
+    ports:
+      - "${PORT:-8179}:8080"
+    # Reads the copies over their own Docker networks (http://<container>:8080).
+    networks:
+      - home
+      - jb
+    # Same lock-down as the dashboard: nothing writable, no special powers.
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    pids_limit: 128
+    mem_limit: 256m
+    volumes:
+      - ./overview.py:/overview/overview.py:ro
+      - ./static:/overview/static:ro
+
+# The networks the dashboard copies' projects create (<project>_default).
+# A new copy: add it here and under networks: above, and to SITES.
+networks:
+  home:
+    name: ${HOME_NETWORK:-fwdash-home_default}
+    external: true
+  jb:
+    name: ${JB_NETWORK:-fwdash-jb_default}
+    external: true
