@@ -65,6 +65,13 @@ services:
 # A new copy: add it here and under both services' networks:, to SITES, and
 # to gateway/nginx.conf + gateway/sites.json.
 networks:
+  # A fixed private subnet: Docker's automatic pick can land on 192.168.x
+  # ranges that hide a site's LAN on the host (192.168.80.0/20 hid JB's
+  # 192.168.93.0/24 on docker2).
+  default:
+    ipam:
+      config:
+        - subnet: ${OVERVIEW_SUBNET:-10.250.79.0/24}
   home:
     name: ${HOME_NETWORK:-fwdash-home_default}
     external: true
