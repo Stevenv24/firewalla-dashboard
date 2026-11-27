@@ -102,7 +102,9 @@ main { padding: 8px 16px 32px; max-width: 1400px; margin: 0 auto; }
 .checks span { font-size: 11px; margin-left: 4px; }
 .checks .ok { color: var(--good); } .checks .no { color: var(--bad); } .checks .na { color: var(--faint); }
 .empty { color: var(--faint); font-size: 13px; }
-.open { margin-top: auto; padding-top: 4px; font-size: 14px; font-weight: 600; }
+.opens { margin-top: auto; padding-top: 4px; display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; }
+.open { font-size: 14px; font-weight: 600; }
+.open.own { font-weight: 500; }
 @media (max-width: 480px) {
     .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .stat .value { font-size: 17px; }
@@ -162,6 +164,14 @@ function checks(c, active) {
     }).join("")}</span>`;
 }
 
+// "Open" goes through the gateway (this tab switches router). "Own tab" opens
+// that router's own port in a new tab, so both can stay open side by side.
+function openLinks(s) {
+    let html = `<div class="opens"><a class="open" href="${esc(s.page)}">Open ${esc(s.name)} dashboard →</a>`;
+    if (s.direct) html += `<a class="open own" href="${esc(s.direct)}" target="_blank" rel="noopener" title="${esc(s.direct)}">Own tab ↗</a>`;
+    return html + `</div>`;
+}
+
 function card(s, now) {
     const [label, lvl] = STATE[s.state] || ["?", "warn"];
     let html = `<div class="card level-${esc(s.level)}">
@@ -171,7 +181,7 @@ function card(s, now) {
         html += `<ul class="problems">${s.problems.map((p) => `<li class="${esc(p.level)}">${esc(p.text)}</li>`).join("")}</ul>`;
     }
     if (!s.reachable) {
-        html += `<a class="open" href="${esc(s.page)}">Open ${esc(s.name)} dashboard →</a></div>`;
+        html += openLinks(s) + `</div>`;
         return html;
     }
     const r = s.router || {}, d = s.devices || {};
@@ -214,7 +224,7 @@ function card(s, now) {
     html += `</div></div>`;
 
     html += `<div class="sub">Router up ${uptime(r.uptime_seconds)}</div>`;
-    html += `<a class="open" href="${esc(s.page)}">Open ${esc(s.name)} dashboard →</a></div>`;
+    html += openLinks(s) + `</div>`;
     return html;
 }
 

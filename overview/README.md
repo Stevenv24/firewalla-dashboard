@@ -37,4 +37,8 @@ Start its dashboard copy (own folder, port and `CONTAINER_PREFIX`), then:
 
 - Both routers share one browser address, so per-browser table sorting and
   filters are shared; saved card layouts stay per router (kept on the server).
+- The router choice is one cookie for the whole address, so two gateway tabs
+  can't show different routers: switching one switches the other on its next
+  refresh. For side by side, use each copy's own port: the Overview's
+  "Own tab ↗" links (the optional fourth `SITES` field) open them.
 - `GET /all/api/overview` returns the Overview's summaries as JSON.

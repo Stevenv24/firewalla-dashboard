@@ -6,10 +6,13 @@
 # a short summary, and serves the summaries at /api/overview and the page at /.
 # It never talks to a router and stores nothing on disk.
 #
-# Sites come from SITES: "Name|status base URL|page URL" entries separated by
-# commas, e.g.
-#   SITES=Home|http://fwdash-home:8080|/site/home,Just Because|http://fwdash-jb:8080|/site/jb
-# (/site/<id> is the gateway's switch link; any URL works.)
+# Sites come from SITES: "Name|status base URL|page URL[|own-tab URL]" entries
+# separated by commas, e.g.
+#   SITES=Home|http://fwdash-home:8080|/site/home|http://192.168.23.70:8180/next,...
+# (/site/<id> is the gateway's switch link; any URL works.) The optional fourth
+# field is that copy's own address: the card then also offers it in a new tab,
+# so two routers can be open side by side (two tabs on the gateway share one
+# router cookie, so they can't).
 
 import os
 import threading
@@ -43,8 +46,9 @@ def parse_sites(text):
     sites = []
     for part in (text or "").split(","):
         bits = [b.strip() for b in part.split("|")]
-        if len(bits) == 3 and all(bits) and bits[1].startswith("http"):
-            sites.append({"name": bits[0], "api": bits[1].rstrip("/"), "page": bits[2]})
+        if len(bits) in (3, 4) and all(bits[:3]) and bits[1].startswith("http"):
+            sites.append({"name": bits[0], "api": bits[1].rstrip("/"), "page": bits[2],
+                          "direct": bits[3] if len(bits) == 4 else ""})
     return sites
 
 
@@ -170,7 +174,7 @@ def summarize(site, status, now):
     level = "bad" if any(l == "bad" for l, _ in problems) else ("warn" if problems else "good")
     site_info = status.get("site") or {}
     return {
-        "name": site["name"], "page": site["page"], "reachable": True, "state": state, "level": level,
+        "name": site["name"], "page": site["page"], "direct": site["direct"], "reachable": True, "state": state, "level": level,
         "problems": [{"level": l, "text": t} for l, t in problems],
         "model": site_info.get("router_model") or "", "age_seconds": age,
         "internet": {"dual_wan": bool(internet.get("dual_wan_enabled")), "mode": internet.get("mode") or "", "wans": wans},
@@ -184,7 +188,7 @@ def summarize(site, status, now):
 
 def unreachable(site, error, now):
     return {
-        "name": site["name"], "page": site["page"], "reachable": False, "state": "offline", "level": "bad",
+        "name": site["name"], "page": site["page"], "direct": site["direct"], "reachable": False, "state": "offline", "level": "bad",
         "problems": [{"level": "bad", "text": f"dashboard not answering ({error})"}],
         "checked_at": now,
     }
@@ -222,7 +226,7 @@ def start_pollers():
 @app.get("/api/overview")
 def api_overview():
     with results_lock:
-        sites = [results.get(s["name"]) or {"name": s["name"], "page": s["page"], "reachable": None,
+        sites = [results.get(s["name"]) or {"name": s["name"], "page": s["page"], "direct": s["direct"], "reachable": None,
                                              "state": "waiting", "level": "warn",
                                              "problems": [{"level": "warn", "text": "first check not done yet"}]}
                  for s in SITES]
